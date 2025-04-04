@@ -1,0 +1,29 @@
+#+title: readme
+
+** game server information
+
+this is game server where you connect with client then you are playing
+uses sockets very modern technology
+client say hello server say welcome cyka blyat
+after that gaming begins
+
+** socket explanation
+
+not wall socket no no
+this socket is like digital pipe very small very fast
+ones and zeroes travel like in train very strong very fast
+client send message server receive then send back
+is like chess but nobody wait turn
+
+** gameplay experience
+
+sometimes server sleepy sometimes client drunk
+packet get lost but come back eventually
+very fun very immersive
+
+** conclusion
+
+connect client start game
+gaming happens
+server happy client happy
+everybody wins except when lag
