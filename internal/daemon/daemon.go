@@ -13,7 +13,7 @@ func StartDaemon() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 
 		}
 		go handleConnection(conn)
@@ -27,7 +27,7 @@ func handleConnection(c net.Conn) {
 		buf := make([]byte, 1024)
 		size, err := c.Read(buf)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return
 		}
 		data := buf[:size]

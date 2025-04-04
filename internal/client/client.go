@@ -17,19 +17,24 @@ func Client() {
 	defer conn.Close()
 
 	reader := bufio.NewReader(os.Stdin)
+
 	for {
 		buf := make([]byte, 1024)
+		fmt.Print("Type message: ")
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		size, err := conn.Write([]byte(line))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return
 		}
+
 		data := buf[:size]
 		conn.Read(data)
-		fmt.Println(string(data))
+
+		fmt.Printf("Server response: %v\n", string(data))
 	}
+
 }
