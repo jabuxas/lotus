@@ -28,7 +28,8 @@ func Client() {
 			log.Println(err)
 		}
 
-		fmt.Println(string(buf[:size]))
+		msg := string(buf[:size])
+		fmt.Println(msg)
 	}
 
 }

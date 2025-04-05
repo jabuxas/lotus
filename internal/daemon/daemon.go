@@ -1,8 +1,11 @@
 package daemon
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"strings"
+	"time"
 )
 
 const (
@@ -12,7 +15,7 @@ const (
 )
 
 func StartDaemon() {
-	ln, err := createListener()
+	ln, err := net.Listen("tcp", Addr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,20 +32,33 @@ func StartDaemon() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	user := receiveUser(conn)
+
 	for {
-		buf := make([]byte, 1024)
-		size, err := conn.Read(buf)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data := buf[:size]
-		log.Printf("Received: %v\n", string(data))
-		conn.Write(data)
+		time.Sleep(time.Second * 5)
+		conn.Write([]byte(fmt.Sprintf("%s, you are still in the game.", user.name)))
 	}
 }
 
-func createListener() (net.Listener, error) {
-	ln, err := net.Listen("tcp", Addr)
-	return ln, err
+type User struct {
+	name string
+}
+
+func receiveUser(conn net.Conn) User {
+	buf := make([]byte, 1024)
+	size, err := conn.Read(buf)
+	if err != nil {
+		log.Println(err)
+	}
+	data := buf[:size]
+
+	user := &User{
+		name: strings.Trim(string(data), "\n "),
+	}
+
+	log.Printf("New user: %v\n", user.name)
+
+	conn.Write([]byte(fmt.Sprintf("Welcome, %s. You are IN the game.", user.name)))
+
+	return *user
 }
