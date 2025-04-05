@@ -5,6 +5,12 @@ import (
 	"net"
 )
 
+const (
+	Addr  = ":6969"
+	Host  = "localhost"
+	Proto = "tcp"
+)
+
 func StartDaemon() {
 	ln, err := createListener()
 	if err != nil {
@@ -20,23 +26,23 @@ func StartDaemon() {
 	}
 }
 
-func handleConnection(c net.Conn) {
-	defer c.Close()
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
 
 	for {
 		buf := make([]byte, 1024)
-		size, err := c.Read(buf)
+		size, err := conn.Read(buf)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		data := buf[:size]
 		log.Printf("Received: %v\n", string(data))
-		c.Write(data)
+		conn.Write(data)
 	}
 }
 
 func createListener() (net.Listener, error) {
-	ln, err := net.Listen("tcp", ":6969")
+	ln, err := net.Listen("tcp", Addr)
 	return ln, err
 }

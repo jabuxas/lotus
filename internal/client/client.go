@@ -6,35 +6,52 @@ import (
 	"log"
 	"net"
 	"os"
+
+	"github.com/jabuxas/lotus/internal/daemon"
 )
 
 func Client() {
-	conn, err := net.Dial("tcp", "localhost:6969")
+	conn, err := net.Dial(daemon.Proto, fmt.Sprintf("%s%s", daemon.Host, daemon.Addr))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer conn.Close()
 
-	reader := bufio.NewReader(os.Stdin)
+	go sendHello(conn)
 
 	for {
 		buf := make([]byte, 1024)
-		fmt.Print("Type message: ")
-		line, err := reader.ReadString('\n')
+
+		size, err := conn.Read(buf)
 		if err != nil {
 			log.Println(err)
 		}
-		size, err := conn.Write([]byte(line))
-		if err != nil {
-			log.Println(err)
-			return
-		}
 
-		data := buf[:size]
-		conn.Read(data)
-
-		fmt.Printf("Server response: %v\n", string(data))
+		fmt.Println(string(buf[:size]))
 	}
 
+}
+
+func sendHello(conn net.Conn) {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("Type your username: ")
+	name, err := reader.ReadString('\n')
+	if err != nil {
+		log.Println(err)
+	}
+
+	buf := make([]byte, 1024)
+	size, err := conn.Write([]byte(name))
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	data := buf[:size]
+	conn.Read(data)
+
+	fmt.Printf("%v\n", string(data))
 }
