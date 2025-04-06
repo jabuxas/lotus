@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -25,6 +26,9 @@ func Client() {
 
 		size, err := conn.Read(buf)
 		if err != nil {
+			if err == io.EOF {
+				log.Fatalf("client can't connect to the daemon: %q", err)
+			}
 			log.Println(err)
 		}
 
