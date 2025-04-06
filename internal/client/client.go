@@ -8,11 +8,11 @@ import (
 	"net"
 	"os"
 
-	"github.com/jabuxas/lotus/internal/daemon"
+	"github.com/jabuxas/lotus/internal/server"
 )
 
 func Client() {
-	conn, err := net.Dial(daemon.Proto, fmt.Sprintf("%s%s", daemon.Host, daemon.Addr))
+	conn, err := net.Dial(server.Proto, fmt.Sprintf("%s%s", server.Host, server.Addr))
 	if err != nil {
 		log.Fatal(err)
 	}

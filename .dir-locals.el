@@ -1,3 +1,3 @@
-((nil . ((project-compile-commands . (("daemon" . "go run cmd/lotusd/main.go")
-                                      ("client" . "go run cmd/lotusc/main.go")
-                                      ("build" . "go build -o lotusd cmd/lotusd/main.go && go build -o lotusc cmd/lotusc/main.go"))))))
+((nil . ((project-compile-commands . (("server" . "go run cmd/lotus/main.go")
+                                      ("client" . "go run cmd/lotusclient/main.go")
+                                      ("build" . "go build -o lotus cmd/lotus/main.go && go build -o lotusclient cmd/lotusclient/main.go"))))))

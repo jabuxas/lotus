@@ -1,4 +1,4 @@
-package daemon
+package server
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ const (
 	Proto = "tcp"
 )
 
-func StartDaemon() {
+func StartServer() {
 	ln, err := net.Listen("tcp", Addr)
 	if err != nil {
 		log.Fatal(err)
