@@ -5,46 +5,87 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
-const (
-	Addr  = ":6969"
-	Host  = "localhost"
-	Proto = "tcp"
-)
+type Server struct {
+	wg       sync.WaitGroup
+	quit     chan interface{}
+	listener net.Listener
+}
 
-func StartServer() {
-	ln, err := net.Listen("tcp", Addr)
+func NewServer(addr string) (*Server, error) {
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to listen on address: %v", addr)
 	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Println(err)
 
+	return &Server{
+		listener: ln,
+		quit:     make(chan interface{}),
+	}, nil
+}
+
+func (s *Server) Serve() {
+	defer s.wg.Done()
+
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			select {
+			case <-s.quit:
+				return
+			default:
+				log.Println(err)
+			}
+		} else {
+			s.wg.Add(1)
+			go func() {
+				s.handleConnection(conn)
+				s.wg.Done()
+			}()
 		}
-		go handleConnection(conn)
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	user := receiveUser(conn)
 
+	tickerExp := time.NewTicker(10 * time.Second)
+	defer tickerExp.Stop()
+	tickerLevel := time.NewTicker(30 * time.Second)
+	defer tickerLevel.Stop()
+
 	for {
-		time.Sleep(time.Second * 5)
-		conn.Write([]byte(fmt.Sprintf("%s, you are still in the game.", user.name)))
+		select {
+		case <-tickerExp.C:
+			user.exp += 10
+			_, err := conn.Write([]byte(fmt.Sprintf("%s, you've gained 10 EXP. you have now %d EXP.", user.name, user.exp)))
+			if err != nil {
+				log.Println("client disconnected: ", err)
+				return
+			}
+		case <-tickerLevel.C:
+			_, err := conn.Write([]byte(fmt.Sprintf("%s, you are level %d", user.name, user.calculateLevel())))
+			if err != nil {
+				log.Println("client disconnected: ", err)
+				return
+			}
+		}
 	}
+
 }
 
-type User struct {
-	name string
+func (s *Server) Stop() {
+	close(s.quit)
+	s.listener.Close()
+	s.wg.Wait()
 }
 
-func receiveUser(conn net.Conn) User {
+func receiveUser(conn net.Conn) *User {
 	buf := make([]byte, 1024)
 	size, err := conn.Read(buf)
 	if err != nil {
@@ -60,5 +101,5 @@ func receiveUser(conn net.Conn) User {
 
 	conn.Write([]byte(fmt.Sprintf("Welcome, %s. You are IN the game.", user.name)))
 
-	return *user
+	return user
 }

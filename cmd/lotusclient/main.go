@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	client.Client()
+	client.StartClient("localhost", ":6969")
 }

@@ -7,12 +7,11 @@ import (
 	"log"
 	"net"
 	"os"
-
-	"github.com/jabuxas/lotus/internal/server"
 )
 
-func Client() {
-	conn, err := net.Dial(server.Proto, fmt.Sprintf("%s%s", server.Host, server.Addr))
+func StartClient(host, port string) {
+	srv := fmt.Sprint(host, port)
+	conn, err := net.Dial("tcp", srv)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +26,8 @@ func Client() {
 		size, err := conn.Read(buf)
 		if err != nil {
 			if err == io.EOF {
-				log.Fatalf("client can't connect to the daemon: %q", err)
+				log.Println("server has closed the connection.")
+				return
 			}
 			log.Println(err)
 		}
