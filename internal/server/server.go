@@ -63,13 +63,13 @@ func (s *Server) handleConnection(conn net.Conn) {
 		select {
 		case <-tickerExp.C:
 			user.exp += 10
-			_, err := conn.Write([]byte(fmt.Sprintf("%s, you've gained 10 EXP. you have now %d EXP.", user.name, user.exp)))
+			_, err := conn.Write([]byte(fmt.Sprintf("%s, you've gained 10 EXP. you have now %d EXP.\n", user.name, user.exp)))
 			if err != nil {
 				log.Println("client disconnected: ", err)
 				return
 			}
 		case <-tickerLevel.C:
-			_, err := conn.Write([]byte(fmt.Sprintf("%s, you are level %d", user.name, user.calculateLevel())))
+			_, err := conn.Write([]byte(fmt.Sprintf("%s, you are level %d.\n", user.name, user.calculateLevel())))
 			if err != nil {
 				log.Println("client disconnected: ", err)
 				return
