@@ -1,15 +1,19 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	_ "github.com/glebarez/go-sqlite"
 )
 
 type Server struct {
+	db       *sql.DB
 	wg       sync.WaitGroup
 	quit     chan interface{}
 	listener net.Listener
@@ -21,7 +25,13 @@ func NewServer(addr string) (*Server, error) {
 		return nil, fmt.Errorf("failed to listen on address: %v", addr)
 	}
 
+	db, err := sql.Open("sqlite", "./db/lotus.db")
+	if err != nil {
+		log.Fatalf("couldn't open the database: %q", err)
+	}
+
 	return &Server{
+		db:       db,
 		listener: ln,
 		quit:     make(chan interface{}),
 	}, nil
@@ -52,7 +62,7 @@ func (s *Server) Serve() {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	user := receiveUser(conn)
+	user := s.receiveUser(conn)
 
 	tickerExp := time.NewTicker(10 * time.Second)
 	defer tickerExp.Stop()
@@ -85,7 +95,7 @@ func (s *Server) Stop() {
 	s.wg.Wait()
 }
 
-func receiveUser(conn net.Conn) *User {
+func (s *Server) receiveUser(conn net.Conn) *User {
 	buf := make([]byte, 1024)
 	size, err := conn.Read(buf)
 	if err != nil {
@@ -93,13 +103,32 @@ func receiveUser(conn net.Conn) *User {
 	}
 	data := buf[:size]
 
-	user := &User{
-		name: strings.Trim(string(data), "\n "),
-	}
+	name := strings.Trim(string(data), "\n ")
+	user := s.getUserOrCreate(name)
 
-	log.Printf("New user: %v\n", user.name)
+	log.Printf("User logged in: %v\n", user.name)
 
 	conn.Write([]byte(fmt.Sprintf("Welcome, %s. You are IN the game.", user.name)))
 
 	return user
+}
+
+func (s *Server) getUserOrCreate(name string) *User {
+	row, err := s.db.Query("select * from user where name = ?", name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer row.Close()
+
+	var user User
+	for row.Next() {
+		if err := row.Scan(&user.id, &user.name, &user.exp); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	fmt.Println(user)
+
+	return &user
 }
