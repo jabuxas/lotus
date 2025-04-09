@@ -13,10 +13,11 @@ import (
 )
 
 type Server struct {
-	db       *sql.DB
-	wg       sync.WaitGroup
-	quit     chan interface{}
-	listener net.Listener
+	db          *sql.DB
+	wg          sync.WaitGroup
+	quit        chan interface{}
+	listener    net.Listener
+	usersOnline map[string]bool
 }
 
 func NewServer(addr string) (*Server, error) {
@@ -31,9 +32,10 @@ func NewServer(addr string) (*Server, error) {
 	}
 
 	return &Server{
-		db:       db,
-		listener: ln,
-		quit:     make(chan interface{}),
+		db:          db,
+		listener:    ln,
+		quit:        make(chan interface{}),
+		usersOnline: make(map[string]bool),
 	}, nil
 }
 
@@ -62,7 +64,11 @@ func (s *Server) Serve() {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	user := s.receiveUser(conn)
+	user, err := s.receiveUser(conn)
+	if err != nil {
+		conn.Write([]byte(err.Error()))
+		return
+	}
 
 	tickerExp := time.NewTicker(10 * time.Second)
 	defer tickerExp.Stop()
@@ -97,12 +103,13 @@ func (s *Server) Stop() {
 
 func (s *Server) handleDisconnect(user *User) {
 	log.Println("user disconnected:", user.name)
+	s.usersOnline[user.name] = false
 	if err := s.updateUser(user); err != nil {
 		log.Println("failed updating user:", err)
 	}
 }
 
-func (s *Server) receiveUser(conn net.Conn) *User {
+func (s *Server) receiveUser(conn net.Conn) (*User, error) {
 	buf := make([]byte, 1024)
 	size, err := conn.Read(buf)
 	if err != nil {
@@ -111,13 +118,24 @@ func (s *Server) receiveUser(conn net.Conn) *User {
 	data := buf[:size]
 
 	name := strings.Trim(string(data), "\n ")
+
+	if s.usersOnline[name] {
+		return nil, fmt.Errorf("the user %s is already logged in", name)
+	}
+
 	user := s.getUserOrCreate(name)
 
 	log.Printf("User logged in: %v\n", user.name)
 
-	conn.Write([]byte(fmt.Sprintf("Welcome, %s. You are IN the game.", user.name)))
+	_, err = conn.Write([]byte(fmt.Sprintf("Welcome, %s. You are IN the game.", user.name)))
 
-	return user
+	if err != nil {
+		log.Printf("couldn't welcome user %s\n", user.name)
+	}
+
+	s.usersOnline[user.name] = true
+
+	return user, nil
 }
 
 func (s *Server) getUserOrCreate(name string) *User {
