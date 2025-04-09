@@ -114,21 +114,34 @@ func (s *Server) receiveUser(conn net.Conn) *User {
 }
 
 func (s *Server) getUserOrCreate(name string) *User {
-	row, err := s.db.Query("select * from user where name = ?", name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer row.Close()
+	row := s.db.QueryRow("select * from user where name = ?", name)
 
 	var user User
-	for row.Next() {
-		if err := row.Scan(&user.id, &user.name, &user.exp); err != nil {
+
+	if err := row.Scan(&user.id, &user.name, &user.exp); err != nil {
+		if err == sql.ErrNoRows {
+			user = User{
+				name: name,
+				exp:  0,
+			}
+			s.addUser(user)
+		} else {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println(user)
-
 	return &user
+}
+
+func (s *Server) addUser(user User) (int64, error) {
+	result, err := s.db.Exec("INSERT INTO user (name, exp) VALUES (?, ?)", user.name, user.exp)
+	if err != nil {
+		return 0, fmt.Errorf("addUser: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("addUser: %v", err)
+	}
+	return id, nil
 }
