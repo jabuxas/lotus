@@ -4,5 +4,5 @@
 the initial idea was to just create something that connects over tcp sockets and then they communicate, but then it evolved to a socket based approach to what is idlerpg on irc (pretty fun interactive gameplay)
 
 ** roadmap:
-- [ ] store user in db
+- [X] store user in db
 - [ ] make sure user only has 1 active connection
