@@ -75,24 +75,31 @@ func (s *Server) handleConnection(conn net.Conn) {
 			user.exp += 10
 			_, err := conn.Write([]byte(fmt.Sprintf("%s, you've gained 10 EXP. you have now %d EXP.\n", user.name, user.exp)))
 			if err != nil {
-				log.Println("client disconnected: ", err)
+				s.handleDisconnect(user)
 				return
 			}
 		case <-tickerLevel.C:
 			_, err := conn.Write([]byte(fmt.Sprintf("%s, you are level %d.\n", user.name, user.calculateLevel())))
 			if err != nil {
-				log.Println("client disconnected: ", err)
+				s.handleDisconnect(user)
 				return
 			}
 		}
 	}
-
 }
 
 func (s *Server) Stop() {
 	close(s.quit)
 	s.listener.Close()
+	s.db.Close()
 	s.wg.Wait()
+}
+
+func (s *Server) handleDisconnect(user *User) {
+	log.Println("user disconnected:", user.name)
+	if err := s.updateUser(user); err != nil {
+		log.Println("failed updating user:", err)
+	}
 }
 
 func (s *Server) receiveUser(conn net.Conn) *User {
@@ -124,7 +131,7 @@ func (s *Server) getUserOrCreate(name string) *User {
 				name: name,
 				exp:  0,
 			}
-			s.addUser(user)
+			s.addUser(&user)
 		} else {
 			log.Fatal(err)
 		}
@@ -133,7 +140,7 @@ func (s *Server) getUserOrCreate(name string) *User {
 	return &user
 }
 
-func (s *Server) addUser(user User) (int64, error) {
+func (s *Server) addUser(user *User) (int64, error) {
 	result, err := s.db.Exec("INSERT INTO user (name, exp) VALUES (?, ?)", user.name, user.exp)
 	if err != nil {
 		return 0, fmt.Errorf("addUser: %v", err)
@@ -144,4 +151,11 @@ func (s *Server) addUser(user User) (int64, error) {
 		return 0, fmt.Errorf("addUser: %v", err)
 	}
 	return id, nil
+}
+
+func (s *Server) updateUser(user *User) error {
+	if _, err := s.db.Exec("UPDATE user SET exp = ? where name = ?;", user.exp, user.name); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
+	}
+	return nil
 }
